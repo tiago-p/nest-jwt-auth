@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, Length } from 'class-validator';
+import { IsEmail, IsEnum, IsOptional, Length } from 'class-validator';
 import { GenderEnum } from '../enum/gender.enum';
 
 export class UserUpdateDto {
@@ -16,5 +16,6 @@ export class UserUpdateDto {
   firstName: string;
 
   @Length(2, 100)
-  company?: string;
+  @IsOptional()
+  company?: string | null;
 }

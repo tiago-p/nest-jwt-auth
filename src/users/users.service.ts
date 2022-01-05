@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserCreateDto } from './dto/user-create.dto';
@@ -12,12 +12,12 @@ export class UsersService {
     private usersRepository: Repository<UserEntity>,
   ) {}
 
-  async create(data: UserCreateDto): Promise<UserEntity> {
-    const userExists = await this.findByEmail(data.email);
+  async create(userInfo: UserCreateDto): Promise<UserEntity> {
+    const userExists = await this.findByEmail(userInfo.email);
     if (userExists) {
-      throw new BadRequestException('User already exists');
+      throw new ConflictException('User already exists');
     }
-    const user: UserEntity = this.usersRepository.create(data);
+    const user: UserEntity = this.usersRepository.create(userInfo);
     return await this.usersRepository.save(user);
   }
 
@@ -41,8 +41,12 @@ export class UsersService {
     });
   }
 
-  async update(id: number, data: UserUpdateDto): Promise<UserEntity> {
-    await this.usersRepository.update({ id }, data);
+  async update(id: number, userInfo: UserUpdateDto): Promise<UserEntity> {
+    const userExists = await this.findByEmail(userInfo.email);
+    if (userExists && id !== userExists.id) {
+      throw new ConflictException('User email already exists');
+    }
+    await this.usersRepository.update({ id }, userInfo);
     return await this.usersRepository.findOne({ id });
   }
 

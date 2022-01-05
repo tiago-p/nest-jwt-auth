@@ -12,10 +12,8 @@ import { AuthGuard } from '@nestjs/passport';
 import {
   ApiBadRequestResponse,
   ApiCreatedResponse,
-  ApiOperation,
   ApiTags,
   ApiUnauthorizedResponse,
-  ApiOkResponse,
   ApiBearerAuth,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
@@ -41,14 +39,13 @@ export class UsersController {
   })
   async register(
     @Body(new ValidationPipe())
-    data: UserCreateDto,
+    userInfo: UserCreateDto,
   ): Promise<UserDto> {
-    const userEntity = await this.usersService.create(data);
+    const userEntity = await this.usersService.create(userInfo);
     return UserDto.toView(userEntity);
   }
 
   @Get('me')
-  @ApiOkResponse({ description: 'User informations', type: UserDto })
   @ApiUnauthorizedResponse({
     description: 'Unauthorized',
   })
@@ -60,9 +57,6 @@ export class UsersController {
   }
 
   @Put('me')
-  @ApiOperation({
-    summary: 'Updates current user',
-  })
   @ApiCreatedResponse({ description: 'User updated.', type: UserDto })
   @ApiUnauthorizedResponse({
     description: 'Unauthorized',
@@ -76,10 +70,10 @@ export class UsersController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
   async update(
+    @User() user: UserDto,
     @Body(new ValidationPipe()) data: UserUpdateDto,
-    @Req() req: Request,
   ): Promise<UserDto> {
-    const user = req['auth'] as UserPayloadDto;
+    //const user = req['auth'] as UserPayloadDto;
     const userEntity = await this.usersService.update(user.id, data);
     return UserDto.toView(userEntity);
   }
