@@ -5,20 +5,16 @@ import {
   Get,
   Body,
   UseGuards,
-  Req,
   ValidationPipe,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import {
   ApiBadRequestResponse,
-  ApiCreatedResponse,
   ApiTags,
   ApiUnauthorizedResponse,
   ApiBearerAuth,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
-import { UserPayloadDto } from 'src/auth/dto/user-payload.dto';
-import { Request } from 'express';
 import { UserCreateDto } from './dto/user-create.dto';
 import { UserUpdateDto } from './dto/user-update.dto';
 import { UserDto } from './dto/user.dto';
@@ -57,7 +53,6 @@ export class UsersController {
   }
 
   @Put('me')
-  @ApiCreatedResponse({ description: 'User updated.', type: UserDto })
   @ApiUnauthorizedResponse({
     description: 'Unauthorized',
   })
@@ -73,7 +68,6 @@ export class UsersController {
     @User() user: UserDto,
     @Body(new ValidationPipe()) data: UserUpdateDto,
   ): Promise<UserDto> {
-    //const user = req['auth'] as UserPayloadDto;
     const userEntity = await this.usersService.update(user.id, data);
     return UserDto.toView(userEntity);
   }
