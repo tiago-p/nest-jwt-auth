@@ -1,9 +1,14 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserCreateDto } from './dto/user-create.dto';
 import { UserUpdateDto } from './dto/user-update.dto';
 import { UserEntity } from './entity/user.entity';
+import { validate } from 'class-validator';
 
 @Injectable()
 export class UsersService {
@@ -17,8 +22,15 @@ export class UsersService {
     if (userExists) {
       throw new ConflictException('User already exists');
     }
-    const user: UserEntity = this.usersRepository.create(userInfo);
-    return await this.usersRepository.save(user);
+    const errors = await validate(userInfo, {
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      forbidUnknownValues: true,
+    });
+    if (errors.length > 0) {
+      throw new BadRequestException('Data validation error');
+    }
+    return await this.usersRepository.save(userInfo);
   }
 
   async findAll(): Promise<UserEntity[]> {
@@ -34,11 +46,7 @@ export class UsersService {
   }
 
   async findOneById(id: number): Promise<UserEntity> {
-    return await this.usersRepository.findOne({
-      where: {
-        id,
-      },
-    });
+    return await this.usersRepository.findOne(id);
   }
 
   async update(id: number, userInfo: UserUpdateDto): Promise<UserEntity> {
@@ -46,12 +54,20 @@ export class UsersService {
     if (userExists && id !== userExists.id) {
       throw new ConflictException('User email already exists');
     }
-    await this.usersRepository.update({ id }, userInfo);
-    return await this.usersRepository.findOne({ id });
+    const errors = await validate(userInfo, {
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      forbidUnknownValues: true,
+    });
+    if (errors.length > 0) {
+      throw new BadRequestException('Data validation error');
+    }
+    await this.usersRepository.update(id, userInfo);
+    return await this.usersRepository.findOne(id);
   }
 
   async remove(id: number): Promise<{ deleted: boolean }> {
-    await this.usersRepository.delete({ id });
+    await this.usersRepository.delete(id);
     return { deleted: true };
   }
 }

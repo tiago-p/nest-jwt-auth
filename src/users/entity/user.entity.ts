@@ -9,7 +9,6 @@ import {
 } from 'typeorm';
 import { GenderEnum } from '../enum/gender.enum';
 import { hashPassword } from '../../shared/password.helper';
-
 @Entity('user')
 export class UserEntity extends BaseEntity {
   @PrimaryGeneratedColumn()
