@@ -74,12 +74,10 @@ export class AuthService {
     const refreshToken = await this.refreshTokenRepository.findOne({
       where: { token },
     });
-    if (!refreshToken) {
-      throw new UnauthorizedException();
-    }
     if (
-      new Date().getTime() > refreshToken.expireAt.getTime() ||
-      refreshToken.revoked === true
+      !refreshToken ||
+      refreshToken.revoked === true ||
+      new Date().getTime() > refreshToken.expireAt.getTime()
     ) {
       throw new UnauthorizedException();
     }
