@@ -30,7 +30,8 @@ export class UsersService {
     if (errors.length > 0) {
       throw new BadRequestException('Data validation error');
     }
-    return await this.usersRepository.save(userInfo);
+    const userEntity = this.usersRepository.create(userInfo);
+    return await this.usersRepository.save(userEntity);
   }
 
   async findAll(): Promise<UserEntity[]> {

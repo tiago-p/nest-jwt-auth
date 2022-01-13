@@ -3,30 +3,25 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { plainToClass } from 'class-transformer';
 import { Repository } from 'typeorm';
-import { UserCreateDto } from '../dto/user-create.dto';
-import { UserUpdateDto } from '../dto/user-update.dto';
-import { UserEntity } from '../entity/user.entity';
-import { GenderEnum } from '../enum/gender.enum';
-import { UsersService } from '../users.service';
+import { UserCreateDto } from '../../src/users/dto/user-create.dto';
+import { UserUpdateDto } from '../../src/users/dto/user-update.dto';
+import { UserEntity } from '../../src/users/entity/user.entity';
+import { GenderEnum } from '../../src/users/enum/gender.enum';
+import { UsersService } from '../../src/users/users.service';
 
 describe('UsersService', () => {
   let service: UsersService;
   let repository: Repository<UserEntity>;
-
-  let findUser: jest.Mock;
-
+  let mockRepository;
   beforeEach(async () => {
-    findUser = jest.fn();
-    const mockRepository = {
-      create: jest.fn(),
+    mockRepository = {
       save: jest.fn(),
       find: jest.fn(),
+      create: jest.fn(),
       update: jest.fn(),
-      findById: jest.fn(),
-      findOne: findUser,
+      findOne: jest.fn(),
       delete: jest.fn(),
     };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
@@ -36,7 +31,6 @@ describe('UsersService', () => {
         },
       ],
     }).compile();
-
     service = module.get<UsersService>(UsersService);
     repository = module.get(getRepositoryToken(UserEntity));
   });
@@ -56,14 +50,15 @@ describe('UsersService', () => {
         firstName: 'Jonh',
         company: 'TEST',
       };
-      findUser.mockResolvedValue(undefined);
     });
 
     it('should call UsersRepository create with correct values', async () => {
-      const createSpy = jest.spyOn(repository, 'save');
+      const createSpy = jest.spyOn(repository, 'create');
+      const saveSpy = jest.spyOn(repository, 'save');
       const userDto = plainToClass(UserCreateDto, mockUser);
       await service.create(userDto);
       expect(createSpy).toHaveBeenCalledWith(userDto);
+      expect(saveSpy).toHaveBeenCalled();
     });
 
     it('should throw an error when contains invalid values', async () => {
@@ -74,7 +69,10 @@ describe('UsersService', () => {
     });
 
     it('should throw an error when user email already exists', async () => {
-      findUser.mockResolvedValue({ id: 2, email: 'test@test.com' });
+      mockRepository.findOne.mockResolvedValue({
+        id: 2,
+        email: 'test@test.com',
+      });
       await expect(service.create(mockUser)).rejects.toThrow(
         new ConflictException('User already exists'),
       );
@@ -108,14 +106,17 @@ describe('UsersService', () => {
     });
 
     it('should throw an error when another user exists with this email', async () => {
-      findUser.mockResolvedValue({ id: 5, email: 'jonh.doe@test.com' });
+      mockRepository.findOne.mockResolvedValue({
+        id: 5,
+        email: 'jonh.doe@test.com',
+      });
       await expect(service.update(2, mockUser)).rejects.toThrow(
         new ConflictException('User email already exists'),
       );
     });
 
-    it('should update user with values', async () => {
-      findUser.mockResolvedValueOnce({ id: 2 });
+    it('should update user with new values', async () => {
+      mockRepository.findOne.mockResolvedValueOnce({ id: 2 });
       const updateSpy = jest.spyOn(repository, 'update');
       await service.update(2, mockUser);
       expect(updateSpy).toHaveBeenCalledWith(2, mockUser);
@@ -123,19 +124,19 @@ describe('UsersService', () => {
   });
 
   describe('Find users', () => {
-    it('should call UserRepository find', async () => {
+    it('should call repository find', async () => {
       const findSpy = jest.spyOn(repository, 'find');
       await service.findAll();
       expect(findSpy).toHaveBeenCalled();
     });
 
-    it('should call UsersRepository findOne with correct id', async () => {
+    it('should call repository findOne with correct id', async () => {
       const findSpy = jest.spyOn(repository, 'findOne');
       await service.findOneById(5);
       expect(findSpy).toHaveBeenCalledWith(5);
     });
 
-    it('should call UsersRepository findOne with correct email', async () => {
+    it('should call repository findOne with correct email', async () => {
       const findSpy = jest.spyOn(repository, 'findOne');
       await service.findByEmail('jonh.doe@test.com');
       expect(findSpy).toHaveBeenCalledWith({
@@ -146,6 +147,14 @@ describe('UsersService', () => {
     it('should throw if repository find throws', async () => {
       jest.spyOn(repository, 'find').mockRejectedValueOnce(new Error());
       await expect(service.findAll()).rejects.toThrow(new Error());
+    });
+  });
+
+  describe('remove user', () => {
+    it('Should call repository delete with correct id', async () => {
+      const deleteSpy = jest.spyOn(repository, 'delete');
+      await service.remove(2);
+      expect(deleteSpy).toHaveBeenCalledWith(2);
     });
   });
 });

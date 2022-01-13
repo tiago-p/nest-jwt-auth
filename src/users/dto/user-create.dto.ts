@@ -2,7 +2,7 @@ import { IsEmail, IsEnum, IsOptional, Length } from 'class-validator';
 import { GenderEnum } from '../enum/gender.enum';
 
 export class UserCreateDto {
-  @Length(5, 10)
+  @Length(6, 16)
   password: string;
 
   @IsEmail()

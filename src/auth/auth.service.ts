@@ -3,12 +3,12 @@ import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { UserPayloadDto } from './dto/user-payload.dto';
 import { TokenDto } from './dto/token.dto';
-import { UserDto } from 'src/users/dto/user.dto';
+import { UserDto } from '../users/dto/user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { RefreshTokenEntity } from './entity/refresh-token.entity';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
-import { comparePasswords } from 'src/shared/password.helper';
+import { comparePasswords } from '../shared/password.helper';
 
 @Injectable()
 export class AuthService {
@@ -44,17 +44,16 @@ export class AuthService {
 
   async login(email: string, password: string): Promise<TokenDto> {
     const user = await this.usersService.findByEmail(email);
-    const userPayload: UserPayloadDto = {
-      email: user.email,
-      id: user.id,
-    };
     if (!user) {
       throw new UnauthorizedException();
     }
     if (!(await comparePasswords(user.password, password))) {
       throw new UnauthorizedException();
     }
-    const accessToken = this.createAccessToken(userPayload);
+    const accessToken = this.createAccessToken({
+      email: user.email,
+      id: user.id,
+    });
     const refreshTokenModel = this.createRefreshToken(user.id);
     await this.refreshTokenRepository.save(refreshTokenModel);
     return {
@@ -76,12 +75,18 @@ export class AuthService {
       where: { token },
     });
     if (!refreshToken) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new UnauthorizedException();
     }
-    if (new Date().getTime() > refreshToken.expireAt.getTime()) {
-      throw new UnauthorizedException('Refresh token has expired');
+    if (
+      new Date().getTime() > refreshToken.expireAt.getTime() ||
+      refreshToken.revoked === true
+    ) {
+      throw new UnauthorizedException();
     }
     const user = await this.usersService.findOneById(refreshToken.idUser);
+    if (!user) {
+      throw new UnauthorizedException();
+    }
     const newAccessToken = this.createAccessToken(user);
     return {
       accessToken: newAccessToken,
